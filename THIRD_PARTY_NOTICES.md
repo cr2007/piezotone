@@ -17,5 +17,6 @@ license texts below (for example, from `go mod download -json` or the module cac
 | [golang.org/x/sys](https://cs.opensource.google/go/x/sys) | v0.50.0 | BSD-3-Clause | (c) 2009 The Go Authors |
 
 The code of this repository came from the `tones` module of go-opendisplay, by the same author.
-The YIN pitch tracker follows de Cheveigne and Kawahara, JASA 111(4), 2002. It is new code, not a
-port of an existing implementation.
+The audio pitch tracker follows the harmonic summation of Klapuri (ISMIR 2006) and the salience
+function of Salamon and Gomez (IEEE TASLP 20(6), 2012). It is new code, not a port of an existing
+implementation.

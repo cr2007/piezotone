@@ -15,20 +15,23 @@ opendisplay buzz -melody "$(piezotone song.mid)"
 1. It reads the file and finds one voice:
    - **MIDI**: it plays the track and channel with the most notes. It skips the drums on channel
      9 (10 in General MIDI numbering). When notes overlap, the highest note sounds.
-   - **Audio**: it finds the pitch every 10 ms with the YIN method, then cuts the pitch track
-     into notes.
+   - **Audio**: every 10 ms it sums the spectrum at the partials of each semitone (harmonic
+     summation) and follows the loudest voice with a smooth path (Viterbi). Then it cuts the
+     pitch track into notes. This keeps the melody over a quieter backing chord or bass.
 2. It gives note events: `piezotone.Note{MIDI, Start, Duration}`. `MIDI` is a MIDI note number
    (69 is A4, 440 Hz) or `piezotone.Rest`.
 3. An output profile writes the notes for a device or a format.
 
 ## What it cannot do
 
-- **One voice only.** A piezo buzzer plays one square-wave tone at a time. Chords become their
-  highest note. Full songs with several instruments give poor results.
+- **One voice only.** A piezo buzzer plays one square-wave tone at a time. In MIDI, chords
+  become their highest note. In audio, piezotone follows the loudest voice. Full songs in which
+  no one voice is clearly the loudest give poor results.
 - **No speech, noise or drums.** These sounds have no stable pitch. piezotone then stops with a
   "found no notes" message. The message gives the length, the loudness, the share of voiced
-  frames and the best YIN dip. A YIN dip near 0 is a clear pitch; a dip near 1 is noise. For a
-  rough pitch, try `-threshold 0.3` to `0.5`.
+  frames and the best pitch contrast: how many times stronger the best pitch is than the mean
+  pitch. A clear tone gives 5 or more; white noise stays below 3. For a rough pitch, try `-voicing 2.5`
+  to `2`.
 - **No timbre.** A piezo plays square-wave tones only. The output keeps pitch and rhythm only.
 
 ## Formats
@@ -66,7 +69,7 @@ go install github.com/cr2007/piezotone/cmd/piezotone@latest
 | `-format` | `opendisplay` | `opendisplay`, `rtttl` or `midi` |
 | `-o FILE` | stdout | write the output to FILE |
 | `-track N`, `-channel N` | `-1` (pick) | MIDI: the track and channel to play |
-| `-threshold T` | `0.15` | audio: YIN threshold; a higher value finds more notes |
+| `-voicing V` | `3` | audio: the pitch contrast a frame needs; a lower value finds more notes |
 | `-min-note MS` | `60` | audio: the shortest note |
 | `-max-notes N` | `104` | opendisplay: the note limit (104 fits one encrypted frame, 119 a plain one) |
 | `-name NAME` | file name | rtttl: the tune name, at most 10 characters |
@@ -81,7 +84,7 @@ samples, rate, err := piezotone.Decode(data)
 notes, err := piezotone.FromPCM(samples, rate, piezotone.PCMOptions{})
 var nn *piezotone.NoNotesError
 if errors.As(err, &nn) {
-	// nn.Seconds, nn.RMSDB, nn.Voiced, nn.BestDip tell why
+	// nn.Seconds, nn.RMSDB, nn.Voiced, nn.BestContrast tell why
 }
 tune, warnings := rtttl.Encode(notes, rtttl.Options{Name: "whistle"})
 ```

@@ -161,7 +161,7 @@ func TestFromPCMNoise(t *testing.T) {
 		t.Fatalf("noise: %v", err)
 	}
 	t.Log(err)
-	if nn.Seconds != 2 || nn.Frames == 0 || nn.BestDip <= nn.Threshold || nn.RMSDB > -10 || nn.RMSDB < -12 {
+	if nn.Seconds != 2 || nn.Frames == 0 || nn.BestContrast >= nn.Voicing || nn.RMSDB > -10 || nn.RMSDB < -12 {
 		t.Errorf("noise: %+v", nn)
 	}
 }
@@ -186,5 +186,43 @@ func TestMIDIHz(t *testing.T) {
 	}
 	if MIDIHz(69) != 440 || HzMIDI(452) != 69 || HzMIDI(453.5) != 70 {
 		t.Error("A4 is not 440 Hz")
+	}
+}
+
+// ringtone renders a melody whose third harmonic is stronger than its
+// fundamental, over a quieter held chord, as in a real phone ringtone.
+func ringtone(melody []tone, rate int) []float32 {
+	var out []float32
+	phase := 0.0
+	for _, n := range melody {
+		for range n.ms * rate / 1000 {
+			v := 0.0
+			if n.midi >= 0 {
+				phase += 2 * math.Pi * 440 * math.Pow(2, (n.midi-69)/12) / float64(rate)
+				v = 0.15*math.Sin(phase) + 0.1*math.Sin(2*phase) + 0.25*math.Sin(3*phase)
+			}
+			out = append(out, float32(v))
+		}
+	}
+	for i := range out {
+		t := float64(i) / float64(rate)
+		out[i] += float32(0.12*math.Sin(2*math.Pi*155.56*t) + 0.08*math.Sin(2*math.Pi*233.08*t)) // D#3 and A#3
+	}
+	return out
+}
+
+func TestFromPCMRingtoneOverChord(t *testing.T) {
+	// A user report: YIN gave long rests and octave errors for a ringtone with a backing chord.
+	melody := []tone{{65, 200}, {67, 200}, {68, 350}, {70, 250}, {68, 200}, {67, 200}, {68, 350},
+		{67, 200}, {65, 350}, {63, 400}, {65, 200}, {67, 500}}
+	notes, err := FromPCM(ringtone(melody, 44100), 44100, PCMOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTimes(t, notes)
+	p, r, f := fMeasure(melody, notes)
+	t.Logf("P %.3f R %.3f F %.3f\n%v", p, r, f, notes)
+	if f < 1 {
+		t.Errorf("F-measure %.3f, want 1", f)
 	}
 }
