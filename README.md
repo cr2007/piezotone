@@ -97,3 +97,13 @@ go test ./...
 The audio tests synthesize a reference melody (sine and square waves, 44.1 and 48 kHz, WAV and
 MP3) and want a note F-measure of 1.0. With ffmpeg installed, they also check FLAC, Ogg Vorbis
 and LAME MP3 files.
+
+## Agent skill
+
+`skills/piezotone/SKILL.md` teaches a coding agent (for example Claude Code) how to use piezotone:
+which output format to pick, which inputs work, and how to read the "found no notes" message.
+Install it for Claude Code by copying the folder into your skills directory:
+
+```sh
+mkdir -p ~/.claude/skills && cp -r skills/piezotone ~/.claude/skills/
+```
