@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,7 +73,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	voicing := fs.Float64("voicing", 3, "audio: a frame has a pitch when its best pitch is `V` times the mean; a lower value finds more notes")
 	minNote := fs.Int("min-note", 60, "audio: shortest note in `MS`")
 	drums := fs.Bool("drums", false, "audio: strike held notes again on drum hits and tick on hits in rests (good for sparse drums)")
-	maxNotes := fs.Int("max-notes", opendisplay.MaxNotesSealed, "opendisplay: cut the melody at `N` notes (104 fits one encrypted frame, 119 a plain one)")
+	maxNotes := fs.Int("max-notes", 0, "opendisplay: cut the melody at `N` notes and 30 s, for an opendisplay CLI that sends one frame (104 notes encrypted, 119 plain); 0 keeps all")
 	name := fs.String("name", "", "rtttl: tune `NAME`, at most 10 characters (default: the file name)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -107,7 +108,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 	switch *format {
 	case "opendisplay":
 		var steps []opendisplay.Step
-		steps, warns = opendisplay.Fit(notes, opendisplay.FitOptions{MaxNotes: *maxNotes})
+		fo := opendisplay.FitOptions{MaxNotes: *maxNotes}
+		if *maxNotes == 0 { // opendisplay buzz sends a long melody as several frames
+			fo = opendisplay.FitOptions{MaxNotes: math.MaxInt, MaxMS: math.MaxInt}
+		}
+		steps, warns = opendisplay.Fit(notes, fo)
 		if len(steps) == 0 {
 			return errors.New("found no notes that the buzzer can play")
 		}

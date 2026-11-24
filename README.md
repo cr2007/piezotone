@@ -38,7 +38,7 @@ opendisplay buzz -melody "$(piezotone song.mid)"
 
 | `-format` | Package | Output |
 |-----------|---------|--------|
-| `opendisplay` (default) | `opendisplay` | The melody notation of `opendisplay buzz -melody` from go-opendisplay, for example `A4:200 R:50 G4+:5`. It fits the notes to the buzzer: 400 to 12000 Hz, 5 ms steps, at most 1275 ms per note, 104 notes (`-max-notes`) and 30 s. |
+| `opendisplay` (default) | `opendisplay` | The melody notation of `opendisplay buzz -melody` from go-opendisplay, for example `A4:200 R:50 G4+:5`. It fits the notes to the buzzer: 400 to 12000 Hz, 5 ms steps, at most 1275 ms per note. `opendisplay buzz` plays a long melody as several frames; `-max-notes` cuts it for an older CLI that sends one frame. |
 | `rtttl` | `rtttl` | A Nokia RTTTL ringtone, for example `song:d=8,o=5,b=112:a,4c6`. Octaves 4 to 7. It picks the tempo that fits the note lengths best. Spec: [mobilefish.com RTTTL specification](https://www.mobilefish.com/tutorials/rtttl/rtttl_quickguide_specification.html). |
 | `midi` | `midi` | A standard MIDI file (type 0) with one voice. |
 
@@ -72,7 +72,7 @@ go install github.com/cr2007/piezotone/cmd/piezotone@latest
 | `-voicing V` | `3` | audio: the pitch contrast a frame needs; a lower value finds more notes |
 | `-min-note MS` | `60` | audio: the shortest note |
 | `-drums` | off | audio: strike held notes again on drum hits and tick on hits in rests; good for sparse drums, too busy for a steady hi-hat |
-| `-max-notes N` | `104` | opendisplay: the note limit (104 fits one encrypted frame, 119 a plain one) |
+| `-max-notes N` | `0` (keep all) | opendisplay: cut at N notes and 30 s, for an opendisplay CLI that sends one frame (104 encrypted, 119 plain) |
 | `-name NAME` | file name | rtttl: the tune name, at most 10 characters |
 
 Warnings, for example "moved the melody up by 2 octave(s)", go to stderr.

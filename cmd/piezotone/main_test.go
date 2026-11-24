@@ -142,3 +142,31 @@ func TestRunDrums(t *testing.T) {
 		}
 	}
 }
+
+func TestRunNoCutByDefault(t *testing.T) {
+	// opendisplay buzz plays several frames, so the default output keeps all 130 notes (65 s).
+	var tr smf.Track
+	for i := range 130 {
+		tr.Add(0, midi.NoteOn(0, uint8(60+i%12), 100))
+		tr.Add(480, midi.NoteOff(0, uint8(60+i%12)))
+	}
+	tr.Close(0)
+	s := smf.New()
+	s.TimeFormat = smf.MetricTicks(480)
+	s.Add(tr)
+	file := filepath.Join(t.TempDir(), "long.mid")
+	var b bytes.Buffer
+	if _, err := s.WriteTo(&b); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, b.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := run([]string{file}, &out, new(bytes.Buffer)); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(strings.Fields(out.String())); n != 130 {
+		t.Errorf("%d steps, want all 130", n)
+	}
+}

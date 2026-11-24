@@ -65,10 +65,10 @@ song with a steady hi-hat: the ticks then sound too busy.
 
 ## OpenDisplay limits
 
-The OpenDisplay buzzer plays 400 to 12000 Hz, in 5 ms steps, for at most 30 s and 104 notes (119
-without encryption). piezotone moves notes by octaves into range and cuts what does not fit, and
-it prints what it changed to stderr. `-max-notes N` sets the cut. A longer tune needs several
-buzz commands.
+The OpenDisplay buzzer plays 400 to 12000 Hz in 5 ms steps. One frame holds 104 notes (119
+without encryption) and plays for at most 30 s; `opendisplay buzz` sends a longer melody as
+several frames. piezotone moves notes by octaves into range and prints what it changed to stderr.
+For an older opendisplay CLI that sends one frame, cut the melody with `-max-notes 104`.
 
 The volume is not part of the melody. On OpenDisplay it is the buzzer duty cycle in the device
 config (`duty_percent`; 50% is the loudest). Change it with `opendisplay export-config` and
