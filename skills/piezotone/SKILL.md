@@ -59,6 +59,10 @@ or speech, one or two notes is often the best possible result. That is the buzze
 
 `-min-note MS` (default 60) drops notes shorter than MS. Raise it to remove short glitches.
 
+`-drums` keeps the beat: a held note is struck again on each drum hit, and a drum hit in a rest
+becomes a short high tick. Use it for a ringtone or jingle with sparse drums. Leave it off for a
+song with a steady hi-hat: the ticks then sound too busy.
+
 ## OpenDisplay limits
 
 The OpenDisplay buzzer plays 400 to 12000 Hz, in 5 ms steps, for at most 30 s and 104 notes (119

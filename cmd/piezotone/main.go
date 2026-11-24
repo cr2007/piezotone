@@ -34,7 +34,8 @@ drums on channel 9). When notes overlap, the highest note plays.
 
 Audio: piezotone follows the loudest voice. It works for a whistle, a
 single instrument or a ringtone, also over a quieter backing chord or bass.
-It does not work when no one voice is clearly the loudest.
+It does not work when no one voice is clearly the loudest. -drums keeps the
+beat of sparse drums.
 
 opendisplay: the buzzer plays 400 to 12000 Hz, in steps of 5 ms, for at most
 30 s and 104 notes. piezotone moves notes by octaves into this range and
@@ -70,6 +71,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 	channel := fs.Int("channel", -1, "MIDI: play channel `N`, 0 to 15; -1 picks one")
 	voicing := fs.Float64("voicing", 3, "audio: a frame has a pitch when its best pitch is `V` times the mean; a lower value finds more notes")
 	minNote := fs.Int("min-note", 60, "audio: shortest note in `MS`")
+	drums := fs.Bool("drums", false, "audio: strike held notes again on drum hits and tick on hits in rests (good for sparse drums)")
 	maxNotes := fs.Int("max-notes", opendisplay.MaxNotesSealed, "opendisplay: cut the melody at `N` notes (104 fits one encrypted frame, 119 a plain one)")
 	name := fs.String("name", "", "rtttl: tune `NAME`, at most 10 characters (default: the file name)")
 	if err := fs.Parse(args); err != nil {
@@ -93,7 +95,7 @@ func run(args []string, stdout, stderr io.Writer) error {
 		var s []float32
 		var rate int
 		if s, rate, err = piezotone.Decode(data); err == nil {
-			notes, err = piezotone.FromPCM(s, rate, piezotone.PCMOptions{Voicing: *voicing, MinNoteMS: *minNote})
+			notes, err = piezotone.FromPCM(s, rate, piezotone.PCMOptions{Voicing: *voicing, MinNoteMS: *minNote, Drums: *drums})
 		}
 	}
 	if err != nil {

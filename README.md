@@ -71,6 +71,7 @@ go install github.com/cr2007/piezotone/cmd/piezotone@latest
 | `-track N`, `-channel N` | `-1` (pick) | MIDI: the track and channel to play |
 | `-voicing V` | `3` | audio: the pitch contrast a frame needs; a lower value finds more notes |
 | `-min-note MS` | `60` | audio: the shortest note |
+| `-drums` | off | audio: strike held notes again on drum hits and tick on hits in rests; good for sparse drums, too busy for a steady hi-hat |
 | `-max-notes N` | `104` | opendisplay: the note limit (104 fits one encrypted frame, 119 a plain one) |
 | `-name NAME` | file name | rtttl: the tune name, at most 10 characters |
 
