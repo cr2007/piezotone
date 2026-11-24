@@ -135,6 +135,9 @@ func TestFit(t *testing.T) {
 		{"trim rests at the ends", []Step{r(300), n(120, 200), r(100)}, FitOptions{}, []Step{n(120, 200)}, 0},
 		{"melody moves up one octave", []Step{n(96, 100), n(100, 100), n(140, 100)}, FitOptions{}, []Step{n(120, 100), n(124, 100), n(164, 100)}, 1},
 		{"one note folds", []Step{n(120, 100), n(124, 100), n(240, 100)}, FitOptions{}, []Step{n(120, 100), n(124, 100), n(216, 100)}, 1},
+		// The shift puts the duration-weighted median note in range; one short low note folds
+		// instead of moving the whole melody up two more octaves.
+		{"a short low note folds", []Step{n(112, 400), n(114, 400), n(116, 400), n(68, 100)}, FitOptions{}, []Step{n(136, 400), n(138, 400), n(140, 395), r(5), n(140, 100)}, 2},
 		// Boundaries 0, 12, 13, 31 round to 10, 15, 30 on the grid.
 		{"quantize to 5 ms", []Step{n(120, 12), n(122, 1), n(124, 18)}, FitOptions{}, []Step{n(120, 10), n(122, 5), n(124, 15)}, 0},
 		{"drop a note shorter than the grid", []Step{n(120, 11), n(122, 1), n(124, 18)}, FitOptions{}, []Step{n(120, 10), n(124, 20)}, 1},

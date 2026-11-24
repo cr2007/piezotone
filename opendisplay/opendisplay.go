@@ -6,6 +6,7 @@ package opendisplay
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -73,9 +74,9 @@ type FitOptions struct {
 	MaxMS    int
 }
 
-// Fit makes notes playable on the buzzer. It moves the melody by whole
-// octaves so that most notes are in range and folds the other notes into
-// range. It puts the note boundaries on the 5 ms grid, merges rests, removes
+// Fit makes notes playable on the buzzer. It moves the melody by the fewest
+// whole octaves that put its median note in range and folds the other notes
+// into range. It puts the note boundaries on the 5 ms grid, merges rests, removes
 // rests at the start and the end, and puts a 5 ms rest between two equal
 // notes so that both sound. It splits notes longer than 1275 ms and cuts the
 // melody at MaxNotes or MaxMS. The warnings tell what Fit changed or dropped.
@@ -99,17 +100,15 @@ func fit(notes []Step, o FitOptions) ([]Step, []string) {
 	}
 	var warns []string
 
-	// Pitch: one octave shift for the melody, then fold what is still out.
-	best, bestIn := 0, -1
-	for _, k := range []int{0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6} {
-		in := 0
-		for _, n := range notes {
-			if i := n.Index + 24*k; !n.Rest && i >= MinIndex && i <= MaxIndex {
-				in++
-			}
+	// Pitch: the smallest octave shift that puts the duration-weighted median note in range,
+	// then fold what is still out. A few wrong low notes then cannot move the whole tune up.
+	best := 0
+	if med, ok := medianIndex(notes); ok {
+		for med+24*best < MinIndex {
+			best++
 		}
-		if in > bestIn {
-			best, bestIn = k, in
+		for med+24*best > MaxIndex {
+			best--
 		}
 	}
 	if best != 0 {
@@ -204,3 +203,23 @@ func trimRests(n []Step) []Step {
 }
 
 func abs(x int) int { return max(x, -x) }
+
+// medianIndex is the duration-weighted median index of the pitched steps.
+func medianIndex(notes []Step) (int, bool) {
+	var ps []Step
+	total := 0
+	for _, n := range notes {
+		if !n.Rest {
+			ps = append(ps, n)
+			total += n.MS
+		}
+	}
+	slices.SortStableFunc(ps, func(a, b Step) int { return a.Index - b.Index })
+	acc := 0
+	for _, n := range ps {
+		if acc += n.MS; 2*acc >= total {
+			return n.Index, true
+		}
+	}
+	return 0, false
+}
