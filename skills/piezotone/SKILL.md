@@ -71,8 +71,8 @@ several frames. piezotone moves notes by octaves into range and prints what it c
 For an older opendisplay CLI that sends one frame, cut the melody with `-max-notes 104`.
 
 The volume is not part of the melody. On OpenDisplay it is the buzzer duty cycle in the device
-config (`duty_percent`; 50% is the loudest). Change it with `opendisplay export-config` and
-`write-config`, not with piezotone.
+config (`duty_percent`; 50% is the loudest). Change it with `opendisplay volume -set 10` (it
+restarts the display), not with piezotone.
 
 ## Examples
 

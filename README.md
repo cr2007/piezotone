@@ -66,7 +66,7 @@ listener preferred the output without `-drums` (86 against 32).
 ## OpenDisplay notes
 
 - The melody has no volume. The buzzer volume is the duty cycle in the device config
-  (`duty_percent`; 50% is the loudest).
+  (`duty_percent`; 50% is the loudest). Set it with `opendisplay volume -set PERCENT`.
 - Tested on one OpenDisplay e-paper display (800 x 480, black and white, firmware 2.27.1) with
   [go-opendisplay](https://github.com/cr2007/go-opendisplay), at duty 10%.
 
