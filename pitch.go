@@ -39,7 +39,7 @@ const (
 // smoothest strong path through the frames (Viterbi). This keeps the melody
 // over a quieter backing chord or bass. It does not work for music in which
 // no one voice is clearly the loudest. When it finds no pitched note, the
-// error is a *NoNotesError.
+// error is a *NoNotesError. A sample that is NaN or infinite counts as 0.
 func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
 	if rate <= 0 {
 		return nil, errors.New("piezotone: sample rate must be positive")
@@ -63,6 +63,11 @@ func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
 	n := (len(samples) + hop - 1) / hop
 	padded := make([]float32, size+len(samples)+size)
 	copy(padded[size:], samples)
+	for i, v := range padded[size : size+len(samples)] {
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) { // a float WAV can hold them
+			padded[size+i] = 0
+		}
+	}
 
 	// Frame energy over 25 ms at the frame center, to find silence and short rests.
 	ew := rate * 25 / 1000
@@ -176,7 +181,7 @@ func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
 	}
 	if !slices.ContainsFunc(steps, func(s step) bool { return s.midi != Rest }) {
 		var e float64
-		for _, v := range samples {
+		for _, v := range padded[size : size+len(samples)] {
 			e += float64(v) * float64(v)
 			nn.PeakDB = max(nn.PeakDB, math.Abs(float64(v)))
 		}

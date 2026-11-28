@@ -226,3 +226,15 @@ func TestFromPCMRingtoneOverChord(t *testing.T) {
 		t.Errorf("F-measure %.3f, want 1", f)
 	}
 }
+
+func TestFromPCMNonFinite(t *testing.T) {
+	// A float WAV can hold NaN or Inf. One bad sample must not change the note.
+	for _, bad := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		s := synth([]tone{{69, 1000}}, 44100, false)
+		s[100] = float32(bad)
+		notes, err := FromPCM(s, 44100, PCMOptions{})
+		if err != nil || pitched(notes) != 1 || notes[0].MIDI != 69 {
+			t.Errorf("sample %v: %s, %v", bad, short(notes), err)
+		}
+	}
+}
