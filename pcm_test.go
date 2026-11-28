@@ -149,6 +149,14 @@ func TestFromPCMSilence(t *testing.T) {
 	}
 }
 
+func TestFromPCMEmpty(t *testing.T) {
+	_, err := FromPCM(nil, 44100, PCMOptions{})
+	var nn *NoNotesError
+	if !errors.As(err, &nn) || nn.Frames != 0 {
+		t.Errorf("empty: %v", err)
+	}
+}
+
 func TestFromPCMNoise(t *testing.T) {
 	// White noise has no stable pitch: FromPCM finds no note and says why.
 	rng := rand.New(rand.NewPCG(1, 2))

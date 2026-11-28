@@ -49,6 +49,9 @@ func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
 	o.Voicing = cmp0(o.Voicing, 3)
 	o.SilenceDB = cmp0(o.SilenceDB, -30)
 	o.MinNoteMS = int(cmp0(float64(o.MinNoteMS), 60))
+	if len(samples) == 0 {
+		return nil, &NoNotesError{PeakDB: math.Inf(-1), RMSDB: math.Inf(-1), Voicing: o.Voicing}
+	}
 
 	lo, hi := max(1, int(math.Ceil(69+12*math.Log2(o.MinHz/440)))), int(math.Floor(69+12*math.Log2(o.MaxHz/440)))
 	if lo > hi || MIDIHz(lo) >= float64(rate)/2 {
