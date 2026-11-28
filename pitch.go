@@ -140,9 +140,12 @@ func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
 		for _, v := range sal {
 			best, sum = max(best, v), sum+v
 		}
+		if best == 0 { // no partial in the pitch range; the contrast would be 0/0
+			continue
+		}
 		contrast := best / (sum / float64(nc))
 		nn.BestContrast = max(nn.BestContrast, contrast)
-		if best == 0 || contrast < o.Voicing {
+		if contrast < o.Voicing {
 			continue
 		}
 		nn.Voiced++

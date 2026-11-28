@@ -246,3 +246,12 @@ func TestFromPCMHugeRate(t *testing.T) {
 		t.Errorf("rate 2^31: %v", err)
 	}
 }
+
+func TestFromPCMContrastNoPartials(t *testing.T) {
+	// A 4 kHz tone has no partial of a pitch up to 200 Hz in its first 8: the contrast is 0, not NaN.
+	_, err := FromPCM(synth([]tone{{69 + 12*math.Log2(4000.0/440), 500}}, 44100, false), 44100, PCMOptions{MaxHz: 200})
+	var nn *NoNotesError
+	if !errors.As(err, &nn) || nn.BestContrast != 0 {
+		t.Errorf("err %v", err)
+	}
+}
