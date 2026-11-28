@@ -69,6 +69,9 @@ listener preferred the output without `-drums` (86 against 32).
   (`duty_percent`; 50% is the loudest). Set it with `opendisplay volume -set PERCENT`.
 - Tested on one OpenDisplay e-paper display (800 x 480, black and white, firmware 2.27.1) with
   [go-opendisplay](https://github.com/cr2007/go-opendisplay), at duty 10%.
+- Pitch, measured with a microphone on that display at duty 30%: all 59 semitones from G#4 (415 Hz) to F#9
+  (11.8 kHz) play within 1.2 cents of equal temperament (mean 0.4 cents). Note starts are within
+  10 ms of the plan, also across frames.
 
 ## Decoders
 
