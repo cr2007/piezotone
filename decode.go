@@ -2,6 +2,7 @@ package piezotone
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -40,7 +41,7 @@ func decodeMP3(b []byte) ([]float32, int, error) {
 	d := mp3.NewDecoder()
 	pcm := make([]float32, 1152*2)
 	var out []float32
-	rate := 0
+	rate, skip, pad := 0, 0, 0
 	for pos := 0; pos < len(b); {
 		n, info, err := d.DecodeFrame(b[pos:], pcm)
 		if err != nil && !errors.Is(err, mp3.ErrUnsupported) {
@@ -49,16 +50,56 @@ func decodeMP3(b []byte) ([]float32, int, error) {
 		if info.FrameBytes == 0 {
 			break
 		}
+		frame := b[pos+info.FrameOffset : pos+info.FrameBytes]
 		pos += info.FrameBytes
-		if n > 0 {
-			out = append(out, mono(pcm[:n*info.Channels], info.Channels)...)
-			rate = info.SampleRate
+		if n == 0 {
+			continue
 		}
+		first := rate == 0
+		rate = info.SampleRate
+		if first {
+			var tag bool
+			if skip, pad, tag = lameTag(frame); tag {
+				continue // the tag frame holds no audio
+			}
+		}
+		out = append(out, mono(pcm[:n*info.Channels], info.Channels)...)
 	}
 	if rate == 0 {
 		return nil, 0, errors.New("piezotone: MP3: no Layer III frames")
 	}
-	return out, rate, nil
+	out = out[min(skip, len(out)):]
+	return out[:len(out)-min(pad, len(out))], rate, nil
+}
+
+// lameTag reads the Xing or Info frame at the start of an MP3. When it has a
+// LAME tag, skip and pad are the samples to cut at the start and the end, as
+// in ffmpeg: the encoder delay plus the 529-sample decoder delay, and the
+// padding minus it. Source: the LAME Mp3 Info Tag rev 1 specification,
+// http://gabriel.mp3-tech.org/mp3infotag.html
+func lameTag(frame []byte) (skip, pad int, ok bool) {
+	i := bytes.Index(frame[:min(len(frame), 4+2+32+4)], []byte("Xing")) // after the header, CRC and side info
+	if i < 0 {
+		i = bytes.Index(frame[:min(len(frame), 4+2+32+4)], []byte("Info"))
+	}
+	if i < 0 || len(frame) < i+8 {
+		return 0, 0, false
+	}
+	flags, off := binary.BigEndian.Uint32(frame[i+4:]), i+8
+	for bit, size := range []int{4, 4, 100, 4} { // frames, bytes, TOC, quality
+		if flags&(1<<bit) != 0 {
+			off += size
+		}
+	}
+	if len(frame) < off+24 {
+		return 0, 0, true
+	}
+	if v := string(frame[off : off+4]); v != "LAME" && v != "Lavf" && v != "Lavc" {
+		return 0, 0, true
+	}
+	x := frame[off+21:]
+	delay, padding := int(x[0])<<4|int(x[1])>>4, int(x[1]&0x0F)<<8|int(x[2])
+	return delay + 529, max(0, padding-529), true
 }
 
 func decodeFLAC(b []byte) ([]float32, int, error) {

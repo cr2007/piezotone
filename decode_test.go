@@ -58,10 +58,16 @@ func TestDecodeFFmpeg(t *testing.T) {
 	if err := os.WriteFile(wav, writeWAV(st, 44100, 2, 24, 1, false), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range []struct{ ext, codec string }{{"flac", "flac"}, {"ogg", "vorbis"}, {"mp3", "libmp3lame"}} {
-		t.Run(c.ext, func(t *testing.T) {
+	for _, c := range []struct {
+		name, ext, codec string
+		extra            []string
+	}{
+		{"flac", "flac", "flac", nil}, {"ogg", "ogg", "vorbis", nil}, {"mp3", "mp3", "libmp3lame", nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
 			out := filepath.Join(dir, "out."+c.ext)
-			if b, err := exec.Command("ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", c.codec, "-strict", "-2", out).CombinedOutput(); err != nil {
+			args := append([]string{"-v", "error", "-y", "-i", wav, "-c:a", c.codec, "-strict", "-2"}, c.extra...)
+			if b, err := exec.Command("ffmpeg", append(args, out)...).CombinedOutput(); err != nil {
 				if strings.Contains(string(b), "Unknown encoder") {
 					t.Skipf("ffmpeg: %s", b)
 				}
@@ -76,6 +82,10 @@ func TestDecodeFFmpeg(t *testing.T) {
 				t.Fatalf("Decode: %d Hz, %v", rate, err)
 			}
 			checkTranscription(t, ref, samples, rate)
+			// The LAME tag gives the MP3 encoder delay and padding, so all three are gapless.
+			if len(samples) != len(s) {
+				t.Errorf("%d samples, want %d", len(samples), len(s))
+			}
 		})
 	}
 }
