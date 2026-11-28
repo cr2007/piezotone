@@ -148,3 +148,20 @@ func TestFromMIDIOnlyTooShort(t *testing.T) {
 		t.Errorf("FromMIDI = %q, no error", short(notes))
 	}
 }
+
+func TestFromMIDITooLong(t *testing.T) {
+	// smf.TimeAt wraps after 2^32 ticks, so a later note got a negative length.
+	var tr smf.Track
+	tr.Add(0, midi.NoteOn(0, 72, 100))
+	tr.Add(10, midi.NoteOff(0, 72))
+	for range 17 { // 17 deltas of 0x0FFFFFFF, the longest that the SMF spec allows
+		tr.Add(0x0FFFFFFF, smf.MetaText("x"))
+	}
+	tr.Add(0, midi.NoteOn(0, 74, 100))
+	tr.Add(10, midi.NoteOff(0, 74))
+	tr.Close(0)
+	notes, err := FromMIDI(bytes.NewReader(encodeSMF(t, 960, tr)), MIDIOptions{Track: -1, Channel: -1})
+	if err == nil {
+		t.Errorf("FromMIDI = %s, no error", short(notes))
+	}
+}

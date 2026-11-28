@@ -41,7 +41,9 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 		var abs int64
 		open := map[[2]uint8]int{} // channel and key to the index in spans
 		for _, ev := range tr {
-			abs += int64(ev.Delta)
+			if abs += int64(ev.Delta); abs > math.MaxUint32 { // smf.TimeAt wraps here
+				return nil, fmt.Errorf("piezotone: MIDI track %d is longer than 2^32 ticks", ti)
+			}
 			var ch, key, vel uint8
 			switch {
 			case ev.Message.GetNoteStart(&ch, &key, &vel):
