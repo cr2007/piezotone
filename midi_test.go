@@ -180,3 +180,22 @@ func TestFromMIDIBadTempo(t *testing.T) {
 		t.Errorf("FromMIDI = %s, no error", short(notes))
 	}
 }
+
+func TestFromMIDIRunningStatusAfterMeta(t *testing.T) {
+	// The note offs use running status after a lyric event. The SMF spec says a
+	// meta event cancels running status, but many files do this, for example
+	// karaoke files. gomidi dropped the note offs, so the notes never ended.
+	trk := "\x00\x90\x3c\x64" + // C4 on
+		"\x00\xff\x05\x01x" + // lyric "x"
+		"\x60\x3c\x00" + // C4 off, running status
+		"\x00\x90\x3e\x64" + // D4 on
+		"\x00\xff\x05\x01y" +
+		"\x60\x3e\x00" + // D4 off, running status
+		"\x83\x00\x90\x40\x64\x60\x40\x00" + // E4 after a rest of 384 ticks
+		"\x00\xff\x2f\x00"
+	smf := "MThd\x00\x00\x00\x06\x00\x00\x00\x01\x00\x60MTrk\x00\x00\x00" + string(rune(len(trk))) + trk
+	notes, err := FromMIDI(strings.NewReader(smf), MIDIOptions{Track: -1, Channel: -1})
+	if got := short(notes); err != nil || got != "60:500 62:500 R:2000 64:500" {
+		t.Errorf("FromMIDI = %s, %v", got, err)
+	}
+}

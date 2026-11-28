@@ -1,6 +1,8 @@
 package piezotone
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -132,7 +134,90 @@ func readSMF(r io.Reader) (s *smf.SMF, err error) {
 			s, err = nil, fmt.Errorf("bad file: %v", p)
 		}
 	}()
-	return smf.ReadFrom(r)
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return smf.ReadFrom(bytes.NewReader(keepRunningStatus(b)))
+}
+
+// keepRunningStatus writes the status byte again in each channel event that
+// uses running status after a meta or sysex event. The SMF 1.0 spec says that
+// these events cancel running status, but many files (for example karaoke
+// files with lyric events) keep it, as most players do. gomidi drops such
+// events, so their notes never end. A track that it cannot walk stays as it is.
+func keepRunningStatus(b []byte) []byte {
+	var out []byte
+	i := 0
+	for i+8 <= len(b) {
+		end := i + 8 + min(int(binary.BigEndian.Uint32(b[i+4:])), len(b)-i-8)
+		trk, changed := statusAfterMeta(b[i+8 : end])
+		if string(b[i:i+4]) != "MTrk" || !changed {
+			out = append(out, b[i:end]...)
+		} else {
+			out = binary.BigEndian.AppendUint32(append(out, "MTrk"...), uint32(len(trk)))
+			out = append(out, trk...)
+		}
+		i = end
+	}
+	return append(out, b[i:]...)
+}
+
+// statusAfterMeta does keepRunningStatus for one track. changed is false when
+// the track needs no change or cannot be walked.
+func statusAfterMeta(t []byte) (out []byte, changed bool) {
+	// vlq reads a variable-length number of at most 4 bytes at t[i:].
+	vlq := func(i int) (v, next int) {
+		for k := i; k < len(t) && k < i+4; k++ {
+			if v = v<<7 | int(t[k]&0x7F); t[k] < 0x80 {
+				return v, k + 1
+			}
+		}
+		return 0, -1
+	}
+	data := func(s byte) int { // program change (Cx) and channel pressure (Dx) have 1 data byte
+		if s>>4 == 0xC || s>>4 == 0xD {
+			return 1
+		}
+		return 2
+	}
+	var status byte
+	cleared := false
+	for j := 0; j < len(t); {
+		_, k := vlq(j)
+		if k < 0 || k >= len(t) {
+			return nil, false
+		}
+		n, c := 0, t[k]
+		switch {
+		case c == 0xFF || c == 0xF0 || c == 0xF7:
+			at := k + 1
+			if c == 0xFF {
+				at++ // the meta type
+			}
+			ln, next := vlq(at)
+			if next < 0 {
+				return nil, false
+			}
+			n, cleared = next-k+ln, true
+		case c >= 0x80:
+			status, cleared, n = c, false, 1+data(c)
+		case status == 0:
+			return nil, false
+		default:
+			n = data(status)
+			if cleared {
+				out, changed, cleared = append(append(out, t[j:k]...), status), true, false
+				j = k
+			}
+		}
+		if k+n > len(t) {
+			return nil, false
+		}
+		out = append(out, t[j:k+n]...)
+		j = k + n
+	}
+	return out, changed
 }
 
 // busiest returns the track and channel with the most notes, without drums
