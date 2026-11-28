@@ -16,7 +16,8 @@ func IsMIDI(b []byte) bool { return bytes.HasPrefix(b, []byte("MThd")) }
 
 // Decode reads a WAV, MP3, FLAC or Ogg Vorbis file. It finds the format from
 // the first bytes, mixes the channels down to mono and returns the samples
-// in [-1, 1] and the sample rate.
+// and the sample rate. Integer PCM is in [-1, 1]; float WAV and lossy data
+// can go past it.
 func Decode(b []byte) ([]float32, int, error) {
 	switch {
 	case len(b) >= 12 && string(b[:4]) == "RIFF" && string(b[8:12]) == "WAVE":

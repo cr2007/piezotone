@@ -10,7 +10,8 @@ import (
 
 // ReadWAV reads a RIFF WAVE file with integer PCM (8, 16, 24 or 32 bit) or
 // float samples (32 or 64 bit), in any channel count. It mixes the channels
-// down to mono and returns the samples in [-1, 1] and the sample rate.
+// down to mono and returns the samples and the sample rate. Integer PCM is in
+// [-1, 1]; float samples are as in the file.
 func ReadWAV(r io.Reader) ([]float32, int, error) {
 	var hdr [12]byte
 	if _, err := io.ReadFull(r, hdr[:]); err != nil || string(hdr[:4]) != "RIFF" || string(hdr[8:]) != "WAVE" {
