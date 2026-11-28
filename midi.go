@@ -93,6 +93,9 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 			}
 		}
 		d := ms(times[i+1]) - ms(t)
+		if d == 0 { // shorter than the ms grid: drop it, so that the note around it stays one note
+			continue
+		}
 		if top == last {
 			notes[len(notes)-1].ms += d
 			continue
@@ -103,6 +106,9 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 			notes = append(notes, step{sel[top].key, d})
 		}
 		last = top
+	}
+	if len(notes) == 0 {
+		return nil, errors.New("piezotone: all MIDI notes are shorter than 1 ms")
 	}
 	return timed(notes), nil
 }

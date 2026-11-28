@@ -46,9 +46,15 @@ func testSMF(t *testing.T) []byte {
 	}
 	drums.Close(0)
 
+	return encodeSMF(t, 480, tempo, lead, bass, drums)
+}
+
+// encodeSMF writes tracks as a type 1 file with ppq ticks per quarter note.
+func encodeSMF(t *testing.T, ppq uint16, tracks ...smf.Track) []byte {
+	t.Helper()
 	s := smf.New()
-	s.TimeFormat = smf.MetricTicks(480)
-	for _, tr := range []smf.Track{tempo, lead, bass, drums} {
+	s.TimeFormat = smf.MetricTicks(ppq)
+	for _, tr := range tracks {
 		if err := s.Add(tr); err != nil {
 			t.Fatal(err)
 		}
@@ -114,5 +120,31 @@ func TestFromMIDIErrors(t *testing.T) {
 		if _, err := FromMIDI(strings.NewReader(h), MIDIOptions{Track: -1, Channel: -1}); err == nil {
 			t.Errorf("%q: no error", h)
 		}
+	}
+}
+
+func TestFromMIDIZeroLengthNote(t *testing.T) {
+	// At 960 ticks per quarter and 120 BPM, ticks 1 and 2 both round to 1 ms.
+	// A grace note on those ticks must not become a 0 ms note.
+	var tr smf.Track
+	tr.Add(0, midi.NoteOn(0, 72, 100))
+	tr.Add(1, midi.NoteOn(0, 79, 100))
+	tr.Add(1, midi.NoteOff(0, 79))
+	tr.Add(958, midi.NoteOff(0, 72))
+	tr.Close(0)
+	notes, err := FromMIDI(bytes.NewReader(encodeSMF(t, 960, tr)), MIDIOptions{Track: -1, Channel: -1})
+	if got := short(notes); err != nil || got != "72:500" {
+		t.Errorf("FromMIDI = %s, %v; want 72:500", got, err)
+	}
+}
+
+func TestFromMIDIOnlyTooShort(t *testing.T) {
+	// One note of 1 tick (0.05 ms at 9600 ticks per quarter) rounds to 0 ms: no notes, so an error.
+	var tr smf.Track
+	tr.Add(0, midi.NoteOn(0, 72, 100))
+	tr.Add(1, midi.NoteOff(0, 72))
+	tr.Close(0)
+	if notes, err := FromMIDI(bytes.NewReader(encodeSMF(t, 9600, tr)), MIDIOptions{Track: -1, Channel: -1}); err == nil {
+		t.Errorf("FromMIDI = %q, no error", short(notes))
 	}
 }
