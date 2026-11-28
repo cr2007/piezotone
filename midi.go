@@ -29,7 +29,7 @@ type span struct {
 // FromMIDI reads a standard MIDI file and returns one voice: when notes
 // overlap, the highest note sounds.
 func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
-	s, err := smf.ReadFrom(r)
+	s, err := readSMF(r)
 	if err != nil {
 		return nil, fmt.Errorf("piezotone: read MIDI: %w", err)
 	}
@@ -105,6 +105,17 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 		last = top
 	}
 	return timed(notes), nil
+}
+
+// readSMF is smf.ReadFrom, but a panic in it (found by FuzzFromMIDI, for example
+// on SMPTE time or a cut header) becomes an error.
+func readSMF(r io.Reader) (s *smf.SMF, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			s, err = nil, fmt.Errorf("bad file: %v", p)
+		}
+	}()
+	return smf.ReadFrom(r)
 }
 
 // busiest returns the track and channel with the most notes, without drums

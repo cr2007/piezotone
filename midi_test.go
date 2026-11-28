@@ -109,4 +109,10 @@ func TestFromMIDIErrors(t *testing.T) {
 	if _, err := FromMIDI(bytes.NewReader([]byte("MThd")), MIDIOptions{Track: -1, Channel: -1}); err == nil {
 		t.Error("short file: no error")
 	}
+	// smf.ReadFrom panicked on these headers: SMPTE time with no tracks, and a cut division.
+	for _, h := range []string{"MThd\x00\x00\x00\x06\x00\x0000\xe00", "MThd\x00\x00\x00\x06\x00\x0100\x81"} {
+		if _, err := FromMIDI(strings.NewReader(h), MIDIOptions{Track: -1, Channel: -1}); err == nil {
+			t.Errorf("%q: no error", h)
+		}
+	}
 }
