@@ -165,3 +165,18 @@ func TestFromMIDITooLong(t *testing.T) {
 		t.Errorf("FromMIDI = %s, no error", short(notes))
 	}
 }
+
+func TestFromMIDIBadTempo(t *testing.T) {
+	// A tempo event with no data gave an infinite tempo, and smf.TimeAt then
+	// gave a time near -2^63 ns. FuzzFromMIDI found it.
+	var tr smf.Track
+	tr.Add(0, midi.NoteOn(0, 72, 100))
+	tr.Add(10, smf.Message{0xFF, 0x51, 0x00})
+	tr.Add(10, midi.NoteOff(0, 72))
+	tr.Add(0, midi.NoteOn(0, 74, 100))
+	tr.Add(10, midi.NoteOff(0, 74))
+	tr.Close(0)
+	if notes, err := FromMIDI(bytes.NewReader(encodeSMF(t, 960, tr)), MIDIOptions{Track: -1, Channel: -1}); err == nil {
+		t.Errorf("FromMIDI = %s, no error", short(notes))
+	}
+}

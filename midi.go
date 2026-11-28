@@ -14,6 +14,9 @@ import (
 // sounds, not pitches, so the auto pick skips it.
 const drumChannel = 9
 
+// maxMIDIMS is the longest MIDI melody, 24 h.
+const maxMIDIMS = 24 * 3600 * 1000
+
 // MIDIOptions picks the notes to play. A value of -1 means "any". When both
 // are -1, FromMIDI picks the track and channel pair with the most notes.
 type MIDIOptions struct {
@@ -84,7 +87,13 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 	}
 	slices.Sort(times)
 	times = slices.Compact(times)
-	ms := func(tick int64) int { return int(math.Round(float64(s.TimeAt(tick)) / 1000)) }
+	at := make([]int, len(times)) // event times in ms
+	for i, tick := range times {
+		at[i] = int(math.Round(float64(s.TimeAt(tick)) / 1000))
+		if at[i] < 0 || at[i] > maxMIDIMS || i > 0 && at[i] < at[i-1] { // for example a tempo event with no data
+			return nil, errors.New("piezotone: the MIDI tempo events give times that are negative, go back or pass 24 h")
+		}
+	}
 	var notes []step
 	last := -2 // index in sel of the last note, -1 for a rest
 	for i, t := range times[:len(times)-1] {
@@ -94,7 +103,7 @@ func FromMIDI(r io.Reader, o MIDIOptions) ([]Note, error) {
 				top = j
 			}
 		}
-		d := ms(times[i+1]) - ms(t)
+		d := at[i+1] - at[i]
 		if d == 0 { // shorter than the ms grid: drop it, so that the note around it stays one note
 			continue
 		}
