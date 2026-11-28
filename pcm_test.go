@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -236,5 +237,12 @@ func TestFromPCMNonFinite(t *testing.T) {
 		if err != nil || pitched(notes) != 1 || notes[0].MIDI != 69 {
 			t.Errorf("sample %v: %s, %v", bad, short(notes), err)
 		}
+	}
+}
+
+func TestFromPCMHugeRate(t *testing.T) {
+	// A WAV header can give up to 4.29 GHz. The FFT size grows with the rate, so FromPCM must refuse it.
+	if _, err := FromPCM(make([]float32, 100), 1<<31, PCMOptions{}); err == nil || !strings.Contains(err.Error(), "sample rate") {
+		t.Errorf("rate 2^31: %v", err)
 	}
 }

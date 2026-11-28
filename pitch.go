@@ -41,8 +41,8 @@ const (
 // no one voice is clearly the loudest. When it finds no pitched note, the
 // error is a *NoNotesError. A sample that is NaN or infinite counts as 0.
 func FromPCM(samples []float32, rate int, o PCMOptions) ([]Note, error) {
-	if rate <= 0 {
-		return nil, errors.New("piezotone: sample rate must be positive")
+	if rate <= 0 || rate > 1_000_000 { // the FFT size grows with the rate; audio files use at most 768 kHz
+		return nil, fmt.Errorf("piezotone: sample rate %d Hz is not in 1 Hz to 1 MHz", rate)
 	}
 	o.MinHz = cmp0(o.MinHz, 80)
 	o.MaxHz = cmp0(o.MaxHz, 5000)
