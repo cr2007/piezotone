@@ -3,6 +3,7 @@ package piezotone
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -197,5 +198,33 @@ func TestFromMIDIRunningStatusAfterMeta(t *testing.T) {
 	notes, err := FromMIDI(strings.NewReader(smf), MIDIOptions{Track: -1, Channel: -1})
 	if got := short(notes); err != nil || got != "60:500 62:500 R:2000 64:500" {
 		t.Errorf("FromMIDI = %s, %v", got, err)
+	}
+}
+
+func TestFromMIDITempoChanges(t *testing.T) {
+	// A tempo event at each quarter note, 121 to 180 BPM, as exact us values.
+	// Note 72 starts after the 60 quarters, at the sum of the tempos.
+	q := func(bpm int) int { return int(math.Round(6e7 / float64(bpm))) }
+	tempo := func(bpm int) smf.Message {
+		v := q(bpm)
+		return smf.Message{0xFF, 0x51, 0x03, byte(v >> 16), byte(v >> 8), byte(v)}
+	}
+	var tr smf.Track
+	tr.Add(0, tempo(121))
+	tr.Add(0, midi.NoteOn(0, 60, 100))
+	tr.Add(1, midi.NoteOff(0, 60))
+	at, total := 1, q(121)
+	for bpm := 122; bpm <= 180; bpm++ {
+		tr.Add(uint32(480*(bpm-121)-at), tempo(bpm))
+		at, total = 480*(bpm-121), total+q(bpm)
+	}
+	tr.Add(uint32(480*60-at), midi.NoteOn(0, 72, 100))
+	tr.Add(480, midi.NoteOff(0, 72))
+	tr.Close(0)
+	notes, err := FromMIDI(bytes.NewReader(encodeSMF(t, 480, tr)), MIDIOptions{Track: -1, Channel: -1})
+	ms := func(us int) int { return int(math.Round(float64(us) / 1000)) }
+	want := fmt.Sprintf("60:1 R:%d 72:%d", ms(total)-1, ms(total+q(180))-ms(total))
+	if got := short(notes); err != nil || got != want {
+		t.Errorf("FromMIDI = %s, %v; want %s", got, err, want)
 	}
 }
