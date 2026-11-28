@@ -38,6 +38,11 @@ func Decode(b []byte) ([]float32, int, error) {
 }
 
 func decodeMP3(b []byte) ([]float32, int, error) {
+	// An ID3v1 tag is the last 128 bytes and starts with "TAG" (id3.org/ID3v1).
+	// go-mp3 skips the last frame when the tag follows it.
+	if len(b) >= 128 && string(b[len(b)-128:len(b)-125]) == "TAG" {
+		b = b[:len(b)-128]
+	}
 	d := mp3.NewDecoder()
 	pcm := make([]float32, 1152*2)
 	var out []float32

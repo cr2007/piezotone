@@ -63,6 +63,7 @@ func TestDecodeFFmpeg(t *testing.T) {
 		extra            []string
 	}{
 		{"flac", "flac", "flac", nil}, {"ogg", "ogg", "vorbis", nil}, {"mp3", "mp3", "libmp3lame", nil},
+		{"mp3 ID3v1", "mp3", "libmp3lame", []string{"-write_id3v1", "1", "-metadata", "title=x"}}, // a tag after the last frame
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			out := filepath.Join(dir, "out."+c.ext)
