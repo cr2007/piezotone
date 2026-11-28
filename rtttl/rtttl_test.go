@@ -45,3 +45,12 @@ func TestEncodeFoldAndName(t *testing.T) {
 		t.Errorf("Encode = %q, want %q, warnings %q", got, want, warns)
 	}
 }
+
+func TestEncodeLongNote(t *testing.T) {
+	// RTTTL has no tie. At 112 BPM a dotted whole note is 3.2 s, so a 7 s note
+	// becomes two dotted whole notes and a quarter: the tone starts 3 times.
+	notes := []piezotone.Note{{MIDI: 81, Duration: 7 * time.Second}}
+	if got, _ := Encode(notes, Options{BPM: 112}); got != "piezotone:d=1,o=5,b=112:a.,a.,4a" {
+		t.Errorf("Encode = %q", got)
+	}
+}

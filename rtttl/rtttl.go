@@ -143,8 +143,9 @@ type length struct {
 }
 
 // lengths splits a duration into the nearest RTTTL lengths. Each piece is at
-// least a 32nd note. shortcut: a note longer than a dotted whole note plays
-// again for each piece; use a slower tempo if that matters.
+// least a 32nd note. RTTTL has no tie, so a note longer than a dotted whole
+// note plays again for each piece (TestEncodeLongNote). A slower tempo gives
+// fewer pieces; tempoError adds a cost for each piece.
 func lengths(d time.Duration, bpm int) []length {
 	whole := 4 * float64(time.Minute) / float64(bpm)
 	var out []length
